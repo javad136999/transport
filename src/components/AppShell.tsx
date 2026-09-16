@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Droplets } from "lucide-react";
+import { Droplets, LayoutDashboard } from "lucide-react";
 
 export function AppShell({
   title,
@@ -16,31 +16,73 @@ export function AppShell({
   const mobileNav = nav.slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-transparent md:flex">
-      <aside className="hidden w-64 shrink-0 border-l border-base-border bg-base-panel md:flex md:flex-col md:sticky md:top-0 md:h-screen">
-        <div className="border-b border-base-border p-5">
+    <div className="min-h-[100dvh] bg-transparent md:flex">
+      <aside className="hidden w-64 shrink-0 border-l border-base-border/80 bg-[#04101ee8] shadow-2xl backdrop-blur-xl md:sticky md:top-0 md:flex md:h-screen md:flex-col">
+        <div className="border-b border-base-border/80 p-5">
           <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 place-items-center rounded-xl bg-aqua-eco text-[#02171B] shadow-glow-cyan"><Droplets size={18} /></div>
-            <div><div className="text-sm font-bold">مدیریت حمل فاضلاب</div><div className="mt-0.5 text-[10px] text-ink-faint">{orgLabel}</div></div>
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-aqua-eco text-white shadow-glow-cyan">
+              <Droplets size={20} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-extrabold tracking-tight text-white">مدیریت حمل فاضلاب</div>
+              <div className="mt-1 truncate text-[10px] text-brand-light/65">{orgLabel}</div>
+            </div>
           </div>
         </div>
-        <nav className="flex-1 space-y-0.5 overflow-y-auto p-3">
-          {nav.map((item) => <Link key={item.href} href={item.href} className={`block rounded-xl px-3 py-2.5 text-sm transition-colors ${item.active ? "bg-brand/15 font-medium text-brand-light shadow-[inset_-2px_0_0_rgba(63,232,245,.8)]" : "text-ink-muted hover:bg-base-panel2 hover:text-ink"}`}>{item.label}</Link>)}
+
+        <nav className="flex-1 space-y-1 overflow-y-auto p-3">
+          {nav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`block rounded-xl border px-3 py-3 text-sm transition-all ${
+                item.active
+                  ? "border-brand/25 bg-brand/10 font-bold text-brand-light shadow-[inset_-3px_0_0_#00BFFF,0_0_22px_rgba(0,191,255,.08)]"
+                  : "border-transparent text-ink-muted hover:border-base-border hover:bg-base-panel2 hover:text-ink"
+              }`}
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
-        <div className="border-t border-base-border p-3 text-[10px] leading-5 text-ink-faint">شرکت پیمانکاران تصفیه صنعت<br />سامانه رصد و مدیریت عملیات</div>
+
+        <div className="border-t border-base-border/80 p-4 text-[10px] leading-6 text-ink-faint">
+          <span className="text-brand-light/70">●</span> رصد و مدیریت عملیات<br />
+          شرکت پیمانکاران تصفیه صنعت
+        </div>
       </aside>
 
-      <main className="min-w-0 flex-1 pb-20 md:pb-0">
-        <header className="sticky top-0 z-30 flex min-h-14 items-center justify-between border-b border-base-border bg-[#061116e8] px-4 backdrop-blur-xl md:px-6">
-          <div><div className="text-[10px] text-cyan-200/55 md:hidden">مدیریت حمل فاضلاب بهداشتی عسلویه</div><h1 className="text-sm font-semibold md:text-base">{title}</h1></div>
-          <div className="hidden rounded-full border border-cyan-300/15 bg-cyan-300/5 px-3 py-1 text-[10px] text-cyan-200/70 md:block">رصد عملیاتی</div>
+      <main className="min-w-0 flex-1 pb-24 md:pb-0">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-4 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl md:px-6">
+          <div className="min-w-0">
+            <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-brand-light/55 md:hidden">
+              <LayoutDashboard size={11} /> سامانه هوشمند حمل پساب
+            </div>
+            <h1 className="truncate text-sm font-bold text-white md:text-base">{title}</h1>
+          </div>
+          <div className="hidden items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1.5 text-[10px] text-brand-light/80 md:flex">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand shadow-[0_0_10px_#00BFFF]" />
+            رصد عملیاتی آنلاین
+          </div>
         </header>
-        <div className="p-4 md:p-6">{children}</div>
+
+        <div className="mx-auto w-full max-w-[1440px] p-3 sm:p-4 md:p-6">{children}</div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-cyan-300/15 bg-[#061116f2] px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur-xl md:hidden">
-        <div className="grid grid-cols-5 gap-1">
-          {mobileNav.map((item) => <Link key={item.href} href={item.href} className={`rounded-xl py-2 text-center text-[10px] ${item.active ? "bg-brand/12 text-cyan-200" : "text-ink-faint"}`}><span className="mx-auto mb-1 block h-1 w-1 rounded-full bg-current" />{item.label}</Link>)}
+      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-brand/20 bg-[#020A15f5] px-2 pt-2 shadow-[0_-12px_35px_rgba(0,0,0,.3)] backdrop-blur-2xl pb-[max(8px,env(safe-area-inset-bottom))] md:hidden">
+        <div className="mx-auto grid max-w-xl grid-cols-5 gap-1">
+          {mobileNav.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`relative min-w-0 rounded-xl px-1 py-2.5 text-center text-[10px] transition-all ${
+                item.active ? "bg-brand/10 font-bold text-brand-light" : "text-ink-faint"
+              }`}
+            >
+              <span className={`mx-auto mb-1 block h-1.5 w-1.5 rounded-full ${item.active ? "bg-brand shadow-[0_0_9px_#00BFFF]" : "bg-current/60"}`} />
+              <span className="block truncate">{item.label}</span>
+            </Link>
+          ))}
         </div>
       </nav>
     </div>
