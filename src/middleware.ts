@@ -16,7 +16,16 @@ const ROLE_HOME: Record<string, string> = {
 };
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request: { headers: request.headers } });
+  const path = request.nextUrl.pathname;
+  const isPublic = path === "/" || path === "/login" || path.startsWith("/register") || path.startsWith("/_next");
+
+  const response = NextResponse.next({ request: { headers: request.headers } });
+
+  // Public pages do not need an Auth round-trip. This removes the unnecessary
+  // Supabase request that was making the login/landing experience feel slow.
+  if (isPublic && !request.cookies.getAll().some((cookie) => cookie.name.includes("auth-token"))) {
+    return response;
+  }
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,26 +33,13 @@ export async function middleware(request: NextRequest) {
     {
       cookies: {
         get: (name: string) => request.cookies.get(name)?.value,
-        set: (name: string, value: string, options: CookieOptions) => {
-          response.cookies.set({ name, value, ...options });
-        },
-        remove: (name: string, options: CookieOptions) => {
-          response.cookies.set({ name, value: "", ...options });
-        },
+        set: (name: string, value: string, options: CookieOptions) => response.cookies.set({ name, value, ...options }),
+        remove: (name: string, options: CookieOptions) => response.cookies.set({ name, value: "", ...options }),
       },
     }
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const path = request.nextUrl.pathname;
-  const isPublic =
-    path === "/" ||
-    path === "/login" ||
-    path.startsWith("/register") ||
-    path.startsWith("/_next");
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
@@ -51,22 +47,16 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Homepage is public so anyone can use the compact tank plate inquiry.
-  if (path === "/") {
-    return response;
-  }
-
-  if (user && path === "/login") {
-    const { data: profile } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
+  // After login, route directly to the correct role dashboard instead of
+  // sending the user to the public homepage first.
+  if (user && (path === "/" || path === "/login")) {
+    const { data: profile } = await supabase.from("users").select("role").eq("id", user.id).maybeSingle();
     const home = (profile?.role && ROLE_HOME[profile.role]) || "/";
-    const url = request.nextUrl.clone();
-    url.pathname = home;
-    return NextResponse.redirect(url);
+    if (home !== "/") {
+      const url = request.nextUrl.clone();
+      url.pathname = home;
+      return NextResponse.redirect(url);
+    }
   }
 
   return response;
