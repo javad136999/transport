@@ -61,13 +61,13 @@ export default function LoginPage() {
       .maybeSingle();
 
     // اگر حساب ایمیل در Auth ساخته شده ولی پروفایل سامانه هنوز ساخته نشده،
-    // در صورت وجود سازمان تأییدشده با همان ایمیل، پروفایل مدیر پتروشیمی را خودکار می‌سازیم.
+    // در صورت وجود سازمان تأییدشده با همان ایمیل، پروفایل نقش سازمانی را می‌سازیم.
     if (!profile && !profileError) {
       const { data: organization, error: organizationError } = await supabase
         .from("organizations")
         .select("id, name, type, status, manager_name, email")
         .ilike("email", normalizedEmail)
-        .eq("type", "petrochemical")
+        .in("type", ["petrochemical", "destination", "transport_company"])
         .maybeSingle();
 
       if (!organizationError && organization) {
@@ -83,7 +83,7 @@ export default function LoginPage() {
             .insert({
               id: data.user.id,
               full_name: organization.manager_name ?? organization.name,
-              role: "petro_manager",
+              role: organization.type === "destination" ? "destination_operator" : organization.type === "transport_company" ? "transport_company" : "petro_manager",
             organization_id: organization.id,
             is_active: true,
           })
@@ -193,9 +193,9 @@ export default function LoginPage() {
     }
     const { data: organization } = await supabase
       .from("organizations")
-      .select("id, name, manager_name, status")
+      .select("id, name, type, manager_name, status")
       .ilike("email", normalizedEmail)
-      .eq("type", "petrochemical")
+      .in("type", ["petrochemical", "destination", "transport_company"])
       .maybeSingle();
     if (!organization || organization.status !== "approved") {
       await supabase.auth.signOut();
@@ -206,7 +206,7 @@ export default function LoginPage() {
     const { error: profileError } = await supabase.from("users").insert({
       id: data.user.id,
       full_name: organization.manager_name ?? organization.name,
-      role: "petro_manager",
+      role: organization.type === "destination" ? "destination_operator" : organization.type === "transport_company" ? "transport_company" : "petro_manager",
       organization_id: organization.id,
       is_active: true,
     });
@@ -217,7 +217,7 @@ export default function LoginPage() {
       return;
     }
     setLoading(false);
-    router.replace("/petro/dashboard");
+    router.replace(organization.type === "destination" ? "/destination/dashboard" : organization.type === "transport_company" ? "/transport/dashboard" : "/petro/dashboard");
     router.refresh();
   }
 
@@ -275,7 +275,7 @@ export default function LoginPage() {
               <div><label className="field-label">ایمیل ثبت‌شده سازمان</label><input className="field-input" type="email" inputMode="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
               <div><label className="field-label">رمز عبور جدید</label><input className="field-input" type="password" autoComplete="new-password" dir="ltr" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
               {error && <p className="text-status-alert text-sm leading-6">{error}</p>}
-              <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال فعال‌سازی..." : "فعال‌سازی حساب پتروشیمی"}</button>
+              <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال فعال‌سازی..." : "فعال‌سازی حساب سازمان"}</button>
             </form>
           )}
 

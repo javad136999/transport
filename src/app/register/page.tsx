@@ -40,6 +40,7 @@ const initialForm = {
   address: "",
   phone: "",
   email: "",
+  password: "",
   manager_name: "",
   env_officer_name: "",
   env_officer_contact: "",
@@ -62,7 +63,8 @@ export default function RegisterPage() {
     if (!form.national_id.trim()) return "شناسه ملی را وارد کنید.";
     if (!form.phone.trim()) return "شماره تماس را وارد کنید.";
     if (!form.manager_name.trim()) return "نام مدیر را وارد کنید.";
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "ایمیل معتبر نیست.";
+    if (!form.email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return "ایمیل معتبر وارد کنید.";
+    if (form.password.length < 8) return "رمز عبور باید حداقل ۸ کاراکتر باشد.";
     return null;
   }
 
@@ -88,7 +90,7 @@ export default function RegisterPage() {
         economic_code: form.economic_code.trim() || null,
         address: form.address.trim() || null,
         phone: form.phone.trim(),
-        email: form.email.trim() || null,
+        email: form.email.trim().toLowerCase(),
         manager_name: form.manager_name.trim(),
         env_officer_name: form.env_officer_name.trim() || null,
         env_officer_contact: form.env_officer_contact.trim() || null,
@@ -97,6 +99,14 @@ export default function RegisterPage() {
 
       if (insertError) {
         setError("ثبت درخواست ناموفق بود: " + insertError.message);
+        return;
+      }
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+      });
+      if (signUpError) {
+        setError("درخواست ثبت شد، اما ساخت حساب ورود انجام نشد. لطفاً با پشتیبانی تماس بگیرید.");
         return;
       }
       setStep(2);
@@ -190,7 +200,8 @@ export default function RegisterPage() {
               <Field label="شماره ثبت" value={form.registration_no} onChange={(v) => update("registration_no", v)} dir="ltr" />
               <Field label="کد اقتصادی" value={form.economic_code} onChange={(v) => update("economic_code", v)} dir="ltr" />
               <Field label="تلفن *" value={form.phone} onChange={(v) => update("phone", v)} dir="ltr" />
-              <Field label="ایمیل" value={form.email} onChange={(v) => update("email", v)} dir="ltr" type="email" />
+              <Field label="ایمیل ورود *" value={form.email} onChange={(v) => update("email", v)} dir="ltr" type="email" />
+              <Field label="رمز عبور ورود *" value={form.password} onChange={(v) => update("password", v)} dir="ltr" type="password" />
               <Field label="نام مدیر *" value={form.manager_name} onChange={(v) => update("manager_name", v)} />
               <Field
                 label="نام مسئول محیط‌زیست"
