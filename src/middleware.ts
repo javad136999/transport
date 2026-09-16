@@ -39,7 +39,11 @@ export async function middleware(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = path === "/login" || path.startsWith("/register") || path.startsWith("/_next");
+  const isPublic =
+    path === "/" ||
+    path === "/login" ||
+    path.startsWith("/register") ||
+    path.startsWith("/_next");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
@@ -47,7 +51,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && (path === "/login" || path === "/")) {
+  // The public homepage is intentionally the plate inquiry page.
+  // Logged-in users can also use it without being redirected to their dashboard.
+  if (path === "/") {
+    return response;
+  }
+
+  if (user && path === "/login") {
     const { data: profile } = await supabase
       .from("users")
       .select("role")
@@ -55,11 +65,6 @@ export async function middleware(request: NextRequest) {
       .single();
 
     const home = (profile?.role && ROLE_HOME[profile.role]) || "/";
-
-    if (path === "/" && home === "/") {
-      return response;
-    }
-
     const url = request.nextUrl.clone();
     url.pathname = home;
     return NextResponse.redirect(url);
