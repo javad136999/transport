@@ -47,7 +47,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user && path === "/login") {
+  if (user && (path === "/login" || path === "/")) {
     const { data: profile } = await supabase
       .from("users")
       .select("role")
@@ -55,6 +55,11 @@ export async function middleware(request: NextRequest) {
       .single();
 
     const home = (profile?.role && ROLE_HOME[profile.role]) || "/";
+
+    if (path === "/" && home === "/") {
+      return response;
+    }
+
     const url = request.nextUrl.clone();
     url.pathname = home;
     return NextResponse.redirect(url);
