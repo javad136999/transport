@@ -24,7 +24,6 @@ body {
   @apply bg-brand/40;
 }
 
-/* پس‌زمینه شبکه‌ای ظریف برای صفحات هدر/معرفی */
 .grid-backdrop {
   background-image: linear-gradient(rgba(63, 232, 245, 0.07) 1px, transparent 1px),
     linear-gradient(90deg, rgba(63, 232, 245, 0.07) 1px, transparent 1px);
@@ -81,10 +80,51 @@ body {
   @apply w-full bg-base-panel2 border border-base-border rounded-lg px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-colors;
 }
 
-/* کارت انتخاب نوع سازمان در صفحه ثبت‌نام */
 .role-card {
   @apply panel p-5 text-right cursor-pointer transition-all hover:border-brand/50 hover:shadow-glow-cyan;
 }
 .role-card.active {
   @apply border-brand shadow-glow-cyan bg-aqua-eco-soft;
+}
+
+.live-tanker-marker {
+  position: relative;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(112, 242, 255, .65);
+  border-radius: 999px;
+  background: rgba(0, 31, 38, .92);
+  color: #7cf4ff;
+  box-shadow: 0 0 0 5px rgba(0, 194, 209, .08), 0 0 22px rgba(0, 194, 209, .55);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.live-tanker-icon { font-size: 14px; transform: rotate(90deg); }
+.live-tanker-pulse {
+  position: absolute;
+  inset: -7px;
+  border: 1px solid rgba(0, 194, 209, .3);
+  border-radius: 999px;
+  animation: tankerPulse 2s ease-out infinite;
+}
+@keyframes tankerPulse {
+  0% { transform: scale(.75); opacity: .8; }
+  100% { transform: scale(1.35); opacity: 0; }
+}
+.live-popup { min-width: 210px; color: #0b2630; font-family: Vazirmatn, Tahoma, sans-serif; }
+.live-popup-title { font-weight: 800; font-size: 14px; margin-bottom: 10px; }
+.live-popup-row { display: flex; justify-content: space-between; gap: 16px; padding: 5px 0; border-bottom: 1px solid #e8eef0; font-size: 12px; }
+.live-popup-row span { color: #71808a; }
+.live-popup-time { margin-top: 9px; font-size: 10px; color: #8a969d; }
+.risk-low { color: #079669; }
+.risk-medium { color: #c27700; }
+.risk-high { color: #d02c4d; }
+
+.maplibregl-popup-content { border-radius: 14px !important; padding: 14px !important; box-shadow: 0 18px 50px rgba(0,0,0,.28) !important; }
+.maplibregl-ctrl-group { overflow: hidden; border-radius: 10px !important; }
+
+@media (max-width: 767px) {
+  .data-table { min-width: 720px; }
+  .mobile-scroll-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
