@@ -15,12 +15,7 @@ export type LiveMissionPoint = {
   recordedAt: string;
 };
 
-const RISK_LABEL: Record<string, string> = {
-  low: "پایین",
-  medium: "متوسط",
-  high: "بالا",
-};
-
+const RISK_LABEL: Record<string, string> = { low: "پایین", medium: "متوسط", high: "بالا" };
 const STATUS_LABEL: Record<string, string> = {
   in_transit: "در حال حمل",
   arrived_destination: "رسیده به مقصد",
@@ -39,7 +34,6 @@ export function LiveOperationsMap({ points }: { points: LiveMissionPoint[] }) {
       style: "https://tiles.openfreemap.org/styles/bright",
       center: [52.60, 27.48],
       zoom: 10.7,
-      attributionControl: true,
     });
 
     map.addControl(new maplibregl.NavigationControl({ showCompass: true }), "top-left");
@@ -56,13 +50,10 @@ export function LiveOperationsMap({ points }: { points: LiveMissionPoint[] }) {
     if (!map) return;
 
     const renderMarkers = () => {
-      const old = document.querySelectorAll(".live-tanker-marker");
-      old.forEach((node) => node.remove());
-
+      document.querySelectorAll(".live-tanker-marker").forEach((node) => node.remove());
       if (!points.length) return;
 
       const bounds = new maplibregl.LngLatBounds();
-
       points.forEach((point) => {
         const markerEl = document.createElement("button");
         markerEl.type = "button";
@@ -85,15 +76,11 @@ export function LiveOperationsMap({ points }: { points: LiveMissionPoint[] }) {
           .setLngLat([point.longitude, point.latitude])
           .setPopup(popup)
           .addTo(map);
-
         bounds.extend([point.longitude, point.latitude]);
       });
 
-      if (points.length > 1) {
-        map.fitBounds(bounds, { padding: 90, maxZoom: 13, duration: 600 });
-      } else if (points.length === 1) {
-        map.flyTo({ center: [points[0].longitude, points[0].latitude], zoom: 12.5, duration: 600 });
-      }
+      if (points.length > 1) map.fitBounds(bounds, { padding: 90, maxZoom: 13, duration: 600 });
+      else map.flyTo({ center: [points[0].longitude, points[0].latitude], zoom: 12.5, duration: 600 });
     };
 
     if (map.isStyleLoaded()) renderMarkers();
@@ -105,10 +92,7 @@ export function LiveOperationsMap({ points }: { points: LiveMissionPoint[] }) {
       <div ref={mapNode} className="h-[520px] w-full md:h-[620px]" />
       <div className="absolute right-4 top-4 rounded-xl border border-white/10 bg-[#06141ad9] px-4 py-3 text-xs text-white shadow-2xl backdrop-blur-xl">
         <div className="mb-2 flex items-center gap-2 font-bold"><span className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" /> رصد زنده ناوگان</div>
-        <div className="space-y-1 text-white/65">
-          <div>تانکرهای روی نقشه: <b className="text-white">{points.length.toLocaleString("fa-IR")}</b></div>
-          <div>آخرین بروزرسانی با بارگذاری صفحه</div>
-        </div>
+        <div className="space-y-1 text-white/65"><div>تانکرهای روی نقشه: <b className="text-white">{points.length.toLocaleString("fa-IR")}</b></div><div>آخرین بروزرسانی با بارگذاری صفحه</div></div>
       </div>
       <div className="pointer-events-none absolute bottom-4 right-4 left-4 flex flex-wrap gap-2 text-[11px]">
         <span className="rounded-full border border-emerald-300/20 bg-[#06141ae6] px-3 py-1.5 text-emerald-200">● ریسک پایین</span>
