@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Droplets, LayoutDashboard } from "lucide-react";
+import { useState } from "react";
+import { Droplets, Home, LayoutDashboard, LogOut, UserCircle, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export function AppShell({
   title,
@@ -16,6 +18,15 @@ export function AppShell({
   children: ReactNode;
 }) {
   const mobileNav = nav.slice(0, 5);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  async function handleLogout() {
+    setLoggingOut(true);
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    window.location.href = "/";
+  }
 
   return (
     <div className="min-h-[100dvh] bg-transparent md:flex">
@@ -55,9 +66,47 @@ export function AppShell({
       </aside>
 
       <main className="min-w-0 flex-1 pb-24 md:pb-0">
-        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-3 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl sm:px-4 md:px-6">
-          <div className="min-w-0">
-            <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-brand-light/55 md:hidden">
+        <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-3 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl sm:px-4 md:px-6">
+          <div className="relative flex items-center">
+            <button
+              type="button"
+              aria-label="پروفایل کاربر"
+              onClick={() => setProfileOpen((value) => !value)}
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-cyan-300/15 bg-cyan-300/5 text-cyan-200 transition hover:border-cyan-300/35 hover:bg-cyan-300/10"
+            >
+              <UserCircle size={23} />
+            </button>
+
+            {profileOpen && (
+              <div className="absolute left-0 top-12 w-56 overflow-hidden rounded-2xl border border-cyan-300/15 bg-[#061321f5] p-2 shadow-[0_20px_60px_rgba(0,0,0,.5)] backdrop-blur-2xl">
+                <div className="mb-2 flex items-center justify-between border-b border-white/5 px-3 py-2">
+                  <div>
+                    <div className="text-xs font-bold text-white">پروفایل کاربر</div>
+                    <div className="mt-1 text-[10px] text-slate-500">{orgLabel}</div>
+                  </div>
+                  <button type="button" onClick={() => setProfileOpen(false)} className="text-slate-500 hover:text-white"><X size={15} /></button>
+                </div>
+                <Link
+                  href="/"
+                  onClick={() => setProfileOpen(false)}
+                  className="flex items-center gap-2 rounded-xl px-3 py-3 text-xs font-semibold text-slate-200 transition hover:bg-cyan-300/10 hover:text-cyan-200"
+                >
+                  <Home size={16} /> صفحه اصلی سایت
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="flex w-full items-center gap-2 rounded-xl px-3 py-3 text-right text-xs font-semibold text-rose-300 transition hover:bg-rose-400/10 disabled:opacity-50"
+                >
+                  <LogOut size={16} /> {loggingOut ? "در حال خروج..." : "خروج از حساب کاربری"}
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 text-right">
+            <div className="mb-0.5 flex items-center justify-end gap-1.5 text-[10px] text-brand-light/55 md:hidden">
               <LayoutDashboard size={11} /> سامانه هوشمند حمل پساب
             </div>
             <h1 className="truncate text-sm font-bold text-white md:text-base">{title}</h1>
