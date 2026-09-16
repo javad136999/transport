@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import GlobalNavigation from "@/components/GlobalNavigation";
 
 export const metadata: Metadata = {
   title: "سامانه مدیریت و نظارت بر حمل پساب",
@@ -17,7 +18,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fa" dir="rtl">
-      <body>{children}</body>
+      <body>
+        <GlobalNavigation />
+        {children}
+      </body>
     </html>
   );
 }
