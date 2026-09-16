@@ -51,8 +51,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // The public homepage is intentionally the plate inquiry page.
-  // Logged-in users can also use it without being redirected to their dashboard.
+  // Homepage is public so anyone can use the compact tank plate inquiry.
   if (path === "/") {
     return response;
   }
