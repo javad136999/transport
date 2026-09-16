@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Droplets, LayoutDashboard, LogOut, UserCircle, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { LogoutButton } from "@/components/LogoutButton";
 
 export function AppShell({
   title,
@@ -105,9 +106,12 @@ export function AppShell({
             <h1 className="truncate text-sm font-bold text-slate-800 md:text-base">{title}</h1>
           </div>
 
-          <div className="hidden items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[10px] text-cyan-700 md:flex">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 shadow-[0_0_10px_#00BFFF]" />
-            رصد عملیاتی آنلاین
+          <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2 rounded-full border border-cyan-200 bg-cyan-50 px-3 py-1.5 text-[10px] text-cyan-700 md:flex">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-cyan-500 shadow-[0_0_10px_#00BFFF]" />
+              رصد عملیاتی آنلاین
+            </div>
+            <LogoutButton compact={true} />
           </div>
         </header>
 

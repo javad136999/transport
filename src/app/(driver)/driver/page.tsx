@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { MISSION_STATUS_LABEL, missionStatusColor } from "@/lib/utils";
 import type { Mission, MissionStatus } from "@/types/database";
 import { BottomNav } from "@/components/BottomNav";
+import { LogoutButton } from "@/components/LogoutButton";
 import { DRIVER_BOTTOM_NAV } from "@/lib/nav";
 
 // نگاشت وضعیت فعلی مأموریت -> دکمه اقدام بعدی که راننده باید بزند
@@ -108,15 +109,21 @@ export default function DriverHomePage() {
 
   return (
     <div className="min-h-screen bg-base pb-24">
-      <header className="p-4 flex items-center justify-between border-b border-base-border">
-        <h1 className="text-base font-medium">مأموریت‌های من</h1>
-        <span
-          className={`text-xs font-mono px-2 py-1 rounded ${
-            gpsStatus === "ok" ? "bg-status-ok/15 text-status-ok" : gpsStatus === "lost" ? "bg-status-alert/15 text-status-alert" : "bg-base-panel2 text-ink-muted"
-          }`}
-        >
-          GPS: {gpsStatus === "ok" ? "فعال" : gpsStatus === "lost" ? "قطع" : "نامشخص"}
-        </span>
+      <header className="sticky top-0 z-30 flex items-center justify-between border-b border-cyan-100 bg-white/90 p-4 shadow-[0_8px_30px_rgba(0,130,170,.08)] backdrop-blur-xl">
+        <div>
+          <p className="text-[10px] font-bold text-cyan-600">سامانه حمل پساب</p>
+          <h1 className="mt-1 text-base font-extrabold text-slate-800">مأموریت‌های من</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`rounded-xl px-2.5 py-2 text-[10px] font-bold ${
+              gpsStatus === "ok" ? "bg-emerald-50 text-emerald-700" : gpsStatus === "lost" ? "bg-rose-50 text-rose-600" : "bg-slate-100 text-slate-500"
+            }`}
+          >
+            GPS: {gpsStatus === "ok" ? "فعال" : gpsStatus === "lost" ? "قطع" : "نامشخص"}
+          </span>
+          <LogoutButton compact={true} />
+        </div>
       </header>
 
       {pendingSync > 0 && (
