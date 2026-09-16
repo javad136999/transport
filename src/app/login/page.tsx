@@ -36,14 +36,10 @@ export default function LoginPage() {
     setLoading(true);
 
     const normalizedEmail = email.trim().toLowerCase();
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-
-    setLoading(false);
+    const { data, error } = await supabase.auth.signInWithPassword({ email: normalizedEmail, password });
 
     if (error) {
+      setLoading(false);
       setError(
         error.message.toLowerCase().includes("email not confirmed")
           ? "ایمیل این حساب هنوز تأیید نشده است."
@@ -53,20 +49,40 @@ export default function LoginPage() {
     }
 
     if (!data.session) {
+      setLoading(false);
       setError("ورود انجام نشد؛ نشست کاربری ایجاد نشد. دوباره تلاش کنید.");
       return;
     }
 
+    // راننده فقط بعد از تأیید مدیر مجاز به ورود است.
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("role, is_active")
+      .eq("id", data.user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("بررسی وضعیت حساب انجام نشد. لطفاً دوباره تلاش کنید.");
+      return;
+    }
+
+    if (profile?.role === "driver" && profile.is_active !== true) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("درخواست رانندگی شما هنوز توسط مدیر تأیید نشده است. پس از تأیید مدیر، ورود شما فعال می‌شود.");
+      return;
+    }
+
     try {
-      if (rememberLogin) {
-        window.localStorage.setItem(SAVED_LOGIN_KEY, normalizedEmail);
-      } else {
-        window.localStorage.removeItem(SAVED_LOGIN_KEY);
-      }
+      if (rememberLogin) window.localStorage.setItem(SAVED_LOGIN_KEY, normalizedEmail);
+      else window.localStorage.removeItem(SAVED_LOGIN_KEY);
     } catch {
       // Ignore storage errors; Supabase session remains active.
     }
 
+    setLoading(false);
     router.replace("/");
     router.refresh();
   }
@@ -85,9 +101,22 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.verifyOtp({ phone, token: otp, type: "sms" });
+    const { data, error } = await supabase.auth.verifyOtp({ phone, token: otp, type: "sms" });
+    if (error) {
+      setLoading(false);
+      return setError("کد وارد شده نادرست یا منقضی است.");
+    }
+
+    if (data.user) {
+      const { data: profile } = await supabase.from("users").select("role, is_active").eq("id", data.user.id).maybeSingle();
+      if (profile?.role === "driver" && profile.is_active !== true) {
+        await supabase.auth.signOut();
+        setLoading(false);
+        return setError("درخواست رانندگی شما هنوز توسط مدیر تأیید نشده است.");
+      }
+    }
+
     setLoading(false);
-    if (error) return setError("کد وارد شده نادرست یا منقضی است.");
     router.replace("/");
     router.refresh();
   }
@@ -102,130 +131,61 @@ export default function LoginPage() {
             <div className="w-9 h-9 rounded-lg bg-aqua-eco shadow-glow-cyan flex items-center justify-center font-mono text-[#02171B] text-sm font-bold">P</div>
             <span className="text-ink-muted text-sm">شرکت پیمانکاران تصفیه صنعت</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold leading-tight mt-10 max-w-md">
-            <span className="text-gradient">سامانه مدیریت و نظارت</span> بر حمل پساب
-          </h1>
-          <p className="text-ink-muted mt-4 max-w-md leading-7">
-            زنجیره دیجیتال قابل رهگیری از درخواست حمل تا بارگیری، جابه‌جایی، تخلیه و تأیید مقصد —
-            برای پتروشیمی‌های منطقه ویژه اقتصادی انرژی پارس.
-          </p>
+          <h1 className="text-3xl md:text-4xl font-bold leading-tight mt-10 max-w-md"><span className="text-gradient">سامانه مدیریت و نظارت</span> بر حمل پساب</h1>
+          <p className="text-ink-muted mt-4 max-w-md leading-7">زنجیره دیجیتال قابل رهگیری از درخواست حمل تا بارگیری، جابه‌جایی، تخلیه و تأیید مقصد — برای پتروشیمی‌های منطقه ویژه اقتصادی انرژی پارس.</p>
         </div>
-        <div className="relative hidden md:flex gap-6 font-mono text-xs text-ink-faint">
-          <span className="text-brand-light">● GPS TRACKING</span>
-          <span className="text-eco-light">● CHAIN OF CUSTODY</span>
-          <span>● RLS SECURED</span>
-        </div>
+        <div className="relative hidden md:flex gap-6 font-mono text-xs text-ink-faint"><span className="text-brand-light">● GPS TRACKING</span><span className="text-eco-light">● CHAIN OF CUSTODY</span><span>● RLS SECURED</span></div>
       </div>
 
       <div className="md:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           <div className="flex gap-2 mb-6 text-sm">
-            <button
-              type="button"
-              onClick={() => setMode("password")}
-              className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-brand text-white" : "text-ink-muted"}`}
-            >
-              ایمیل و رمز عبور
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("otp")}
-              className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-brand text-white" : "text-ink-muted"}`}
-            >
-              موبایل و کد یکبارمصرف
-            </button>
+            <button type="button" onClick={() => setMode("password")} className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-brand text-white" : "text-ink-muted"}`}>ایمیل و رمز عبور</button>
+            <button type="button" onClick={() => setMode("otp")} className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-brand text-white" : "text-ink-muted"}`}>موبایل و کد یکبارمصرف</button>
           </div>
 
           {mode === "password" && (
             <form onSubmit={handlePasswordLogin} className="space-y-4" autoComplete="on">
               <div>
                 <label className="field-label">ایمیل سازمانی</label>
-                <input
-                  className="field-input"
-                  type="email"
-                  inputMode="email"
-                  autoComplete="username"
-                  dir="ltr"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
+                <input className="field-input" type="email" inputMode="email" autoComplete="username" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required />
               </div>
               <div>
                 <label className="field-label">رمز عبور</label>
                 <div className="flex items-center gap-2">
-                  <input
-                    className="field-input flex-1"
-                    type={showPassword ? "text" : "password"}
-                    autoComplete="current-password"
-                    dir="ltr"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((value) => !value)}
-                    aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
-                    title={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
-                    className="shrink-0 grid h-11 w-11 place-items-center rounded-lg border border-base-border bg-base-panel text-brand-light/80 transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand-light"
-                  >
+                  <input className="field-input flex-1" type={showPassword ? "text" : "password"} autoComplete="current-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"} title={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"} className="shrink-0 grid h-11 w-11 place-items-center rounded-lg border border-base-border bg-base-panel text-brand-light/80 transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand-light">
                     {showPassword ? <Eye size={19} /> : <EyeOff size={19} />}
                   </button>
                 </div>
               </div>
-
               <label className="flex cursor-pointer items-center gap-2 text-xs text-ink-muted select-none">
-                <input
-                  type="checkbox"
-                  checked={rememberLogin}
-                  onChange={(e) => setRememberLogin(e.target.checked)}
-                  className="h-4 w-4 accent-cyan-400"
-                />
+                <input type="checkbox" checked={rememberLogin} onChange={(e) => setRememberLogin(e.target.checked)} className="h-4 w-4 accent-cyan-400" />
                 اطلاعات ورود من را به خاطر بسپار
               </label>
-
               {error && <p className="text-status-alert text-sm">{error}</p>}
-              <button className="btn-primary w-full" disabled={loading}>
-                {loading ? "در حال ورود..." : "ورود"}
-              </button>
+              <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال ورود..." : "ورود"}</button>
             </form>
           )}
 
           {mode === "otp" && !otpSent && (
             <form onSubmit={handleSendOtp} className="space-y-4">
-              <div>
-                <label className="field-label">شماره موبایل</label>
-                <input className="field-input" dir="ltr" placeholder="09xxxxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-              </div>
+              <div><label className="field-label">شماره موبایل</label><input className="field-input" dir="ltr" placeholder="09xxxxxxxxx" value={phone} onChange={(e) => setPhone(e.target.value)} required /></div>
               {error && <p className="text-status-alert text-sm">{error}</p>}
-              <button className="btn-primary w-full" disabled={loading}>
-                {loading ? "در حال ارسال..." : "ارسال کد"}
-              </button>
+              <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال ارسال..." : "ارسال کد"}</button>
             </form>
           )}
 
           {mode === "otp" && otpSent && (
             <form onSubmit={handleVerifyOtp} className="space-y-4">
-              <div>
-                <label className="field-label">کد ارسال‌شده به {phone}</label>
-                <input className="field-input" dir="ltr" value={otp} onChange={(e) => setOtp(e.target.value)} required />
-              </div>
+              <div><label className="field-label">کد ارسال‌شده به {phone}</label><input className="field-input" dir="ltr" value={otp} onChange={(e) => setOtp(e.target.value)} required /></div>
               {error && <p className="text-status-alert text-sm">{error}</p>}
-              <button className="btn-primary w-full" disabled={loading}>
-                {loading ? "در حال بررسی..." : "تأیید و ورود"}
-              </button>
+              <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال بررسی..." : "تأیید و ورود"}</button>
             </form>
           )}
 
-          <p className="text-ink-faint text-xs mt-6">
-            پتروشیمی هنوز عضو سامانه نیست؟{" "}
-            <a href="/register" className="text-brand-light">ثبت درخواست عضویت</a>
-          </p>
-          <p className="text-ink-faint text-xs mt-2">
-            راننده هستید؟{" "}
-            <a href="/register/driver" className="text-brand-light">ثبت‌نام راننده</a>
-          </p>
+          <p className="text-ink-faint text-xs mt-6">پتروشیمی هنوز عضو سامانه نیست؟ <a href="/register" className="text-brand-light">ثبت درخواست عضویت</a></p>
+          <p className="text-ink-faint text-xs mt-2">راننده هستید؟ <a href="/register/driver" className="text-brand-light">ثبت‌نام راننده</a></p>
         </div>
       </div>
     </div>
