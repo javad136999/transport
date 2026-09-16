@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { Droplets, LayoutDashboard } from "lucide-react";
+import { ArrowRight, Droplets, Home, LayoutDashboard } from "lucide-react";
 
 export function AppShell({
   title,
@@ -14,6 +16,14 @@ export function AppShell({
   children: ReactNode;
 }) {
   const mobileNav = nav.slice(0, 5);
+
+  function goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      window.location.href = "/";
+    }
+  }
 
   return (
     <div className="min-h-[100dvh] bg-transparent md:flex">
@@ -53,7 +63,7 @@ export function AppShell({
       </aside>
 
       <main className="min-w-0 flex-1 pb-24 md:pb-0">
-        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-4 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl md:px-6">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-4 pl-28 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl md:px-6 md:pl-32">
           <div className="min-w-0">
             <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-brand-light/55 md:hidden">
               <LayoutDashboard size={11} /> سامانه هوشمند حمل پساب
@@ -65,6 +75,27 @@ export function AppShell({
             رصد عملیاتی آنلاین
           </div>
         </header>
+
+        <div className="fixed left-3 top-3 z-[100] flex items-center gap-2 sm:left-4 sm:top-4">
+          <button
+            type="button"
+            onClick={goBack}
+            aria-label="بازگشت به مرحله قبل"
+            title="بازگشت"
+            className="flex h-10 items-center gap-1.5 rounded-xl border border-brand/25 bg-[#03101bf2] px-3 text-xs font-bold text-brand-light shadow-[0_0_20px_rgba(0,191,255,.12)] backdrop-blur-xl transition hover:border-brand/50 hover:bg-brand/10 active:scale-95"
+          >
+            <ArrowRight size={17} />
+            <span className="hidden sm:inline">بازگشت</span>
+          </button>
+          <Link
+            href="/"
+            aria-label="صفحه اصلی"
+            title="صفحه اصلی"
+            className="grid h-10 w-10 place-items-center rounded-xl border border-brand/25 bg-[#03101bf2] text-brand-light shadow-[0_0_20px_rgba(0,191,255,.12)] backdrop-blur-xl transition hover:border-brand/50 hover:bg-brand/10 active:scale-95"
+          >
+            <Home size={18} />
+          </Link>
+        </div>
 
         <div className="mx-auto w-full max-w-[1440px] p-3 sm:p-4 md:p-6">{children}</div>
       </main>
