@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+
+const SAVED_LOGIN_KEY = "waste-login-email";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,19 +13,61 @@ export default function LoginPage() {
   const [mode, setMode] = useState<"password" | "otp">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [rememberLogin, setRememberLogin] = useState(true);
   const [phone, setPhone] = useState("");
   const [otpSent, setOtpSent] = useState(false);
   const [otp, setOtp] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    try {
+      const savedEmail = window.localStorage.getItem(SAVED_LOGIN_KEY);
+      if (savedEmail) setEmail(savedEmail);
+    } catch {
+      // localStorage may be unavailable in private/restricted browser modes.
+    }
+  }, []);
+
   async function handlePasswordLogin(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
     setLoading(false);
-    if (error) return setError("ایمیل یا رمز عبور نادرست است.");
+
+    if (error) {
+      setError(
+        error.message.toLowerCase().includes("email not confirmed")
+          ? "ایمیل این حساب هنوز تأیید نشده است."
+          : "ایمیل یا رمز عبور نادرست است."
+      );
+      return;
+    }
+
+    if (!data.session) {
+      setError("ورود انجام نشد؛ نشست کاربری ایجاد نشد. دوباره تلاش کنید.");
+      return;
+    }
+
+    try {
+      if (rememberLogin) {
+        window.localStorage.setItem(SAVED_LOGIN_KEY, normalizedEmail);
+      } else {
+        window.localStorage.removeItem(SAVED_LOGIN_KEY);
+      }
+    } catch {
+      // Ignore storage errors; Supabase session remains active.
+    }
+
+    router.replace("/");
     router.refresh();
   }
 
@@ -43,12 +88,12 @@ export default function LoginPage() {
     const { error } = await supabase.auth.verifyOtp({ phone, token: otp, type: "sms" });
     setLoading(false);
     if (error) return setError("کد وارد شده نادرست یا منقضی است.");
+    router.replace("/");
     router.refresh();
   }
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      {/* Identity panel */}
       <div className="md:w-1/2 grid-backdrop bg-base-panel border-l border-base-border flex flex-col justify-between p-10 relative overflow-hidden">
         <div className="absolute -top-20 -left-20 w-72 h-72 bg-brand/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-24 -right-10 w-72 h-72 bg-eco/20 rounded-full blur-3xl" />
@@ -72,17 +117,18 @@ export default function LoginPage() {
         </div>
       </div>
 
-      {/* Form panel */}
       <div className="md:w-1/2 flex items-center justify-center p-8">
         <div className="w-full max-w-sm">
           <div className="flex gap-2 mb-6 text-sm">
             <button
+              type="button"
               onClick={() => setMode("password")}
               className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-brand text-white" : "text-ink-muted"}`}
             >
               ایمیل و رمز عبور
             </button>
             <button
+              type="button"
               onClick={() => setMode("otp")}
               className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-brand text-white" : "text-ink-muted"}`}
             >
@@ -91,15 +137,54 @@ export default function LoginPage() {
           </div>
 
           {mode === "password" && (
-            <form onSubmit={handlePasswordLogin} className="space-y-4">
+            <form onSubmit={handlePasswordLogin} className="space-y-4" autoComplete="on">
               <div>
                 <label className="field-label">ایمیل سازمانی</label>
-                <input className="field-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                <input
+                  className="field-input"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
+                  dir="ltr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <label className="field-label">رمز عبور</label>
-                <input className="field-input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <div className="relative">
+                  <input
+                    className="field-input pl-12"
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    dir="ltr"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+                    title={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
+                    className="absolute left-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-lg text-brand-light/75 transition hover:bg-brand/10 hover:text-brand-light"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>
+
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-ink-muted select-none">
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={(e) => setRememberLogin(e.target.checked)}
+                  className="h-4 w-4 accent-cyan-400"
+                />
+                اطلاعات ورود من را به خاطر بسپار
+              </label>
+
               {error && <p className="text-status-alert text-sm">{error}</p>}
               <button className="btn-primary w-full" disabled={loading}>
                 {loading ? "در حال ورود..." : "ورود"}
@@ -135,15 +220,11 @@ export default function LoginPage() {
 
           <p className="text-ink-faint text-xs mt-6">
             پتروشیمی هنوز عضو سامانه نیست؟{" "}
-            <a href="/register" className="text-brand-light">
-              ثبت درخواست عضویت
-            </a>
+            <a href="/register" className="text-brand-light">ثبت درخواست عضویت</a>
           </p>
           <p className="text-ink-faint text-xs mt-2">
             راننده هستید؟{" "}
-            <a href="/register/driver" className="text-brand-light">
-              ثبت‌نام راننده
-            </a>
+            <a href="/register/driver" className="text-brand-light">ثبت‌نام راننده</a>
           </p>
         </div>
       </div>
