@@ -153,9 +153,9 @@ export default function LoginPage() {
               </div>
               <div>
                 <label className="field-label">رمز عبور</label>
-                <div className="relative">
+                <div className="flex items-center gap-2">
                   <input
-                    className="field-input pl-12"
+                    className="field-input flex-1"
                     type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     dir="ltr"
@@ -168,9 +168,9 @@ export default function LoginPage() {
                     onClick={() => setShowPassword((value) => !value)}
                     aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
                     title={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"}
-                    className="absolute left-2 top-1/2 -translate-y-1/2 grid h-9 w-9 place-items-center rounded-lg text-brand-light/75 transition hover:bg-brand/10 hover:text-brand-light"
+                    className="shrink-0 grid h-11 w-11 place-items-center rounded-lg border border-base-border bg-base-panel text-brand-light/80 transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand-light"
                   >
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    {showPassword ? <Eye size={19} /> : <EyeOff size={19} />}
                   </button>
                 </div>
               </div>
