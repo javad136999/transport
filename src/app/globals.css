@@ -1,0 +1,90 @@
+@import url("https://cdn.jsdelivr.net/gh/rastikerdar/vazirmatn@v33.003/Vazirmatn-font-face.css");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-vazir: "Vazirmatn", Tahoma, sans-serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+}
+
+html {
+  direction: rtl;
+}
+
+body {
+  @apply bg-base text-ink font-vazir antialiased;
+  background-image: radial-gradient(circle at 15% 0%, rgba(0, 194, 209, 0.10), transparent 45%),
+    radial-gradient(circle at 85% 100%, rgba(31, 207, 122, 0.10), transparent 45%);
+  background-attachment: fixed;
+}
+
+::selection {
+  @apply bg-brand/40;
+}
+
+/* پس‌زمینه شبکه‌ای ظریف برای صفحات هدر/معرفی */
+.grid-backdrop {
+  background-image: linear-gradient(rgba(63, 232, 245, 0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(63, 232, 245, 0.07) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+
+.panel {
+  @apply bg-base-panel border border-base-border rounded-lg;
+}
+
+.panel-glow {
+  @apply bg-base-panel border border-brand/25 rounded-lg shadow-glow-cyan;
+}
+
+.kpi-value {
+  @apply font-mono text-2xl tracking-tight text-ink;
+}
+
+.data-table th {
+  @apply text-ink-muted text-xs font-normal text-right py-2 px-3 border-b border-base-border;
+}
+.data-table td {
+  @apply text-sm py-2 px-3 border-b border-base-border/60;
+}
+.data-table tr:hover td {
+  @apply bg-base-panel2;
+}
+
+.status-dot {
+  @apply inline-block w-2 h-2 rounded-full ml-1.5 align-middle;
+}
+
+.text-gradient {
+  @apply bg-aqua-eco bg-clip-text text-transparent;
+}
+
+.btn-primary {
+  @apply bg-aqua-eco text-[#02171B] text-sm font-bold py-2.5 px-5 rounded-lg transition-all hover:shadow-glow-cyan hover:brightness-110 active:scale-[0.98];
+}
+.btn-secondary {
+  @apply bg-base-panel2 hover:bg-base-border text-ink text-sm font-medium py-2.5 px-5 rounded-lg border border-base-border transition-colors;
+}
+.btn-outline-eco {
+  @apply bg-transparent text-eco-light border border-eco/50 text-sm font-medium py-2.5 px-5 rounded-lg transition-all hover:bg-eco/10 hover:shadow-glow-green;
+}
+.btn-driver {
+  @apply w-full text-[#02171B] text-base font-bold py-4 rounded-lg shadow-glow-cyan active:scale-[0.98] transition-transform bg-aqua-eco;
+}
+
+.field-label {
+  @apply block text-xs text-ink-muted mb-1.5;
+}
+.field-input {
+  @apply w-full bg-base-panel2 border border-base-border rounded-lg px-3 py-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-brand focus:border-brand transition-colors;
+}
+
+/* کارت انتخاب نوع سازمان در صفحه ثبت‌نام */
+.role-card {
+  @apply panel p-5 text-right cursor-pointer transition-all hover:border-brand/50 hover:shadow-glow-cyan;
+}
+.role-card.active {
+  @apply border-brand shadow-glow-cyan bg-aqua-eco-soft;
+}
