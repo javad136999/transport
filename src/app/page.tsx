@@ -1,25 +1,24 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
+import { Droplets, Search, ShieldCheck, Truck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { normalizePlate } from "@/lib/utils";
-import { BottomNav } from "@/components/BottomNav";
-import { PATROL_BOTTOM_NAV } from "@/lib/nav";
 
 type QueryResult = {
   status: "authorized" | "needs_review" | "unauthorized" | "not_registered";
   vehicle?: any;
-  activeMission?: any;
 };
 
-const STATUS_META: Record<QueryResult["status"], { dot: string; label: string; text: string }> = {
-  authorized: { dot: "bg-status-ok", label: "🟢 مجاز", text: "text-status-ok" },
-  needs_review: { dot: "bg-status-warn", label: "🟡 نیازمند بررسی", text: "text-status-warn" },
-  unauthorized: { dot: "bg-status-alert", label: "🔴 غیرفعال / غیرمجاز در سامانه", text: "text-status-alert" },
-  not_registered: { dot: "bg-ink-faint", label: "⚪ ثبت نشده", text: "text-ink-faint" },
+const STATUS_META: Record<QueryResult["status"], { label: string; text: string }> = {
+  authorized: { label: "مجاز و تأییدشده", text: "text-status-ok" },
+  needs_review: { label: "نیازمند بررسی", text: "text-status-warn" },
+  unauthorized: { label: "غیرفعال / غیرمجاز", text: "text-status-alert" },
+  not_registered: { label: "در سامانه ثبت نشده", text: "text-ink-faint" },
 };
 
-export default function PlateInquiryPage() {
+export default function HomePage() {
   const supabase = createClient();
   const [plateInput, setPlateInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,130 +28,119 @@ export default function PlateInquiryPage() {
     e.preventDefault();
     setLoading(true);
     setResult(null);
-    const normalized = normalizePlate(plateInput);
 
+    const normalized = normalizePlate(plateInput);
     const { data: vehicle } = await supabase
       .from("vehicles")
-      .select("id, plate_normalized, fleet_no, capacity_liters, vehicle_type, status, transport_company_id")
+      .select("id, plate_normalized, fleet_no, capacity_liters, vehicle_type, status")
       .eq("plate_normalized", normalized)
       .maybeSingle();
 
     let status: QueryResult["status"] = "not_registered";
-    let activeMission: any = null;
-
-    if (vehicle) {
-      if (vehicle.status === "approved") {
-        const { data: approvals } = await supabase
-          .from("vehicle_approvals")
-          .select("status")
-          .eq("vehicle_id", vehicle.id)
-          .eq("status", "approved")
-          .limit(1);
-        status = approvals && approvals.length > 0 ? "authorized" : "needs_review";
-      } else if (vehicle.status === "pending") {
-        status = "needs_review";
-      } else {
-        status = "unauthorized";
-      }
-
-      const { data: mission } = await supabase
-        .from("missions")
-        .select("mission_no, status, petrochemical_id, loading_site_id, destination_id, driver_id, updated_at")
+    if (vehicle?.status === "approved") {
+      const { data: approval } = await supabase
+        .from("vehicle_approvals")
+        .select("id")
         .eq("vehicle_id", vehicle.id)
-        .not("status", "in", "(completed,cancelled)")
-        .order("updated_at", { ascending: false })
+        .eq("status", "approved")
         .limit(1)
         .maybeSingle();
-      activeMission = mission ?? null;
+      status = approval ? "authorized" : "needs_review";
+    } else if (vehicle?.status === "pending") {
+      status = "needs_review";
+    } else if (vehicle) {
+      status = "unauthorized";
     }
 
-    // ثبت لاگ استعلام (patrol_logs) — patrol_user_id واقعی باید از سشن کاربر گرفته شود
-    await supabase.from("patrol_logs").insert({
-      plate_queried: plateInput,
-      plate_normalized: normalized,
-      result: status,
-    } as any);
-
-    setResult({ status, vehicle, activeMission });
+    setResult({ status, vehicle });
     setLoading(false);
   }
 
   return (
-    <div className="min-h-screen bg-base pb-24">
-      <header className="p-4 border-b border-base-border">
-        <h1 className="text-base font-medium">استعلام تانکر</h1>
-      </header>
-
-      <div className="p-4">
-        <form onSubmit={handleInquiry} className="panel p-4 space-y-3">
-          <label className="field-label">شماره پلاک (فارسی یا انگلیسی)</label>
-          <input
-            className="field-input text-lg font-mono text-center tracking-widest"
-            dir="ltr"
-            placeholder="12الف345"
-            value={plateInput}
-            onChange={(e) => setPlateInput(e.target.value)}
-            required
-          />
-          <button className="btn-driver bg-brand" disabled={loading}>
-            {loading ? "در حال استعلام..." : "استعلام"}
-          </button>
-        </form>
-
-        {result && (
-          <div className="panel p-4 mt-4 space-y-4">
-            <div className="flex items-center gap-2">
-              <span className={`status-dot ${STATUS_META[result.status].dot}`} />
-              <span className={`text-sm font-medium ${STATUS_META[result.status].text}`}>
-                {STATUS_META[result.status].label}
-              </span>
+    <main className="min-h-[100dvh] bg-base px-4 py-6 md:px-8 md:py-10">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-8 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="grid h-11 w-11 place-items-center rounded-2xl bg-aqua-eco text-white shadow-glow-cyan">
+              <Droplets size={22} />
             </div>
+            <div>
+              <div className="font-extrabold text-white">سامانه مدیریت حمل فاضلاب</div>
+              <div className="mt-1 text-xs text-ink-faint">رصد و مدیریت حمل فاضلاب بهداشتی عسلویه</div>
+            </div>
+          </div>
+          <Link href="/login" className="btn-secondary text-sm">ورود به سامانه</Link>
+        </header>
 
-            {result.vehicle ? (
-              <dl className="text-sm space-y-1.5">
-                <Row label="پلاک" value={result.vehicle.plate_normalized} mono />
-                <Row label="شماره ناوگان" value={result.vehicle.fleet_no ?? "—"} />
-                <Row label="ظرفیت" value={result.vehicle.capacity_liters ? `${result.vehicle.capacity_liters} لیتر` : "—"} />
-                <Row label="نوع تانکر" value={result.vehicle.vehicle_type ?? "—"} />
-                <Row label="وضعیت ثبت" value={result.vehicle.status} />
-              </dl>
-            ) : (
-              <p className="text-sm text-ink-faint">این پلاک در سامانه ثبت نشده است.</p>
-            )}
+        <section className="mb-6 overflow-hidden rounded-3xl border border-cyan-300/15 bg-gradient-to-br from-[#06252d] via-[#071a20] to-[#061116] p-6 shadow-[0_0_50px_rgba(0,194,209,.08)] md:p-10">
+          <div className="max-w-3xl">
+            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1.5 text-xs text-brand-light">
+              <ShieldCheck size={14} /> سامانه هوشمند و قابل ردیابی
+            </div>
+            <h1 className="text-2xl font-extrabold leading-10 text-white md:text-4xl">مدیریت هوشمند حمل فاضلاب بهداشتی</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-7 text-ink-muted md:text-base">
+              مدیریت یکپارچه درخواست حمل، راننده، تانکر، مأموریت، مسیر، بارگیری و تخلیه در زنجیره عملیات فاضلاب بهداشتی عسلویه.
+            </p>
+          </div>
+        </section>
 
-            <div className="border-t border-base-border pt-3">
-              <p className="text-xs text-ink-muted mb-2">مأموریت فعال</p>
-              {result.activeMission ? (
-                <dl className="text-sm space-y-1.5">
-                  <Row label="شماره مأموریت" value={result.activeMission.mission_no} mono />
-                  <Row label="وضعیت مأموریت" value={result.activeMission.status} />
-                  {/* توجه: بنا به اصل حریم خصوصی (§50) نام راننده و کدملی کامل نمایش داده نمی‌شود */}
-                </dl>
-              ) : (
-                <p className="text-sm text-ink-faint">در حال حاضر مأموریت فعال ثبت‌شده‌ای برای این تانکر وجود ندارد.</p>
+        <section className="panel mx-auto max-w-3xl p-5 md:p-6">
+          <div className="mb-4 flex items-center gap-3">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-brand/10 text-brand-light">
+              <Search size={19} />
+            </div>
+            <div>
+              <h2 className="font-bold text-white">استعلام تانکر</h2>
+              <p className="mt-1 text-xs text-ink-faint">برای بررسی وضعیت یک تانکر، شماره پلاک را وارد کنید.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleInquiry} className="flex flex-col gap-3 sm:flex-row">
+            <input
+              className="field-input min-w-0 flex-1 text-center text-lg font-mono tracking-widest"
+              dir="ltr"
+              placeholder="12الف345"
+              value={plateInput}
+              onChange={(e) => setPlateInput(e.target.value)}
+              required
+            />
+            <button className="btn-driver bg-brand sm:w-36" disabled={loading}>
+              {loading ? "در حال بررسی..." : "استعلام"}
+            </button>
+          </form>
+
+          {result && (
+            <div className="mt-4 rounded-2xl border border-base-border bg-base-panel2/50 p-4">
+              <div className="flex items-center gap-2">
+                <span className={`h-2.5 w-2.5 rounded-full ${result.status === "authorized" ? "bg-status-ok" : result.status === "needs_review" ? "bg-status-warn" : result.status === "unauthorized" ? "bg-status-alert" : "bg-ink-faint"}`} />
+                <span className={`text-sm font-bold ${STATUS_META[result.status].text}`}>{STATUS_META[result.status].label}</span>
+              </div>
+              {result.vehicle && (
+                <div className="mt-3 grid grid-cols-2 gap-3 text-sm md:grid-cols-4">
+                  <Info label="پلاک" value={result.vehicle.plate_normalized} mono />
+                  <Info label="ناوگان" value={result.vehicle.fleet_no ?? "—"} />
+                  <Info label="ظرفیت" value={result.vehicle.capacity_liters ? `${result.vehicle.capacity_liters} لیتر` : "—"} />
+                  <Info label="نوع تانکر" value={result.vehicle.vehicle_type ?? "—"} />
+                </div>
               )}
             </div>
+          )}
+        </section>
 
-            <button
-              className="btn-secondary w-full"
-              onClick={() => (window.location.href = `/patrol/inquiry/report?plate=${encodeURIComponent(plateInput)}`)}
-            >
-              ثبت گزارش گشت
-            </button>
-          </div>
-        )}
+        <div className="mt-6 grid gap-4 md:grid-cols-3">
+          <Feature icon={<Truck size={18} />} title="مدیریت ناوگان" text="کنترل رانندگان و تانکرهای تأییدشده" />
+          <Feature icon={<ShieldCheck size={18} />} title="کنترل و نظارت" text="ثبت و پیگیری عملیات به‌صورت قابل ردیابی" />
+          <Feature icon={<Droplets size={18} />} title="زنجیره تخلیه" text="مدیریت بارگیری، حمل و تخلیه فاضلاب" />
+        </div>
       </div>
-
-      <BottomNav items={PATROL_BOTTOM_NAV} currentPath="/patrol/inquiry" />
-    </div>
+    </main>
   );
 }
 
-function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-ink-muted">{label}</dt>
-      <dd className={mono ? "font-mono" : ""}>{value}</dd>
-    </div>
-  );
+function Info({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
+  return <div><div className="text-xs text-ink-faint">{label}</div><div className={`mt-1 font-semibold text-white ${mono ? "font-mono" : ""}`}>{value}</div></div>;
+}
+
+function Feature({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
+  return <div className="panel p-4"><div className="mb-2 flex items-center gap-2 text-brand-light">{icon}<span className="font-semibold text-white">{title}</span></div><p className="text-xs leading-6 text-ink-faint">{text}</p></div>;
 }
