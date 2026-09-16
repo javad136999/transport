@@ -54,12 +54,53 @@ export default function LoginPage() {
       return;
     }
 
-    // راننده فقط بعد از تأیید مدیر مجاز به ورود است.
-    const { data: profile, error: profileError } = await supabase
+    let { data: profile, error: profileError } = await supabase
       .from("users")
-      .select("role, is_active")
+      .select("role, is_active, organization_id")
       .eq("id", data.user.id)
       .maybeSingle();
+
+    // اگر حساب ایمیل در Auth ساخته شده ولی پروفایل سامانه هنوز ساخته نشده،
+    // در صورت وجود سازمان تأییدشده با همان ایمیل، پروفایل مدیر پتروشیمی را خودکار می‌سازیم.
+    if (!profile && !profileError) {
+      const { data: organization, error: organizationError } = await supabase
+        .from("organizations")
+        .select("id, name, type, status, manager_name, email")
+        .ilike("email", normalizedEmail)
+        .eq("type", "petrochemical")
+        .maybeSingle();
+
+      if (!organizationError && organization) {
+        if (organization.status !== "approved") {
+          await supabase.auth.signOut();
+          setLoading(false);
+          setError("سازمان پتروشیمی هنوز توسط مدیر سامانه تأیید نشده است.");
+          return;
+        }
+
+        const { data: createdProfile, error: createProfileError } = await supabase
+          .from("users")
+          .insert({
+            id: data.user.id,
+            email: normalizedEmail,
+            full_name: organization.manager_name ?? organization.name,
+            role: "petro_manager",
+            organization_id: organization.id,
+            is_active: true,
+          })
+          .select("role, is_active, organization_id")
+          .single();
+
+        if (createProfileError) {
+          await supabase.auth.signOut();
+          setLoading(false);
+          setError("حساب ایمیل ساخته شده، اما پروفایل پتروشیمی ایجاد نشد. وضعیت عضویت سازمان را بررسی کنید.");
+          return;
+        }
+
+        profile = createdProfile;
+      }
+    }
 
     if (profileError) {
       await supabase.auth.signOut();
@@ -68,10 +109,24 @@ export default function LoginPage() {
       return;
     }
 
-    if (profile?.role === "driver" && profile.is_active !== true) {
+    if (!profile) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("برای این ایمیل حساب سازمانی در سامانه پیدا نشد. ابتدا عضویت سازمان را ثبت و تأیید کنید.");
+      return;
+    }
+
+    if (profile.role === "driver" && profile.is_active !== true) {
       await supabase.auth.signOut();
       setLoading(false);
       setError("درخواست رانندگی شما هنوز توسط مدیر تأیید نشده است. پس از تأیید مدیر، ورود شما فعال می‌شود.");
+      return;
+    }
+
+    if (profile.is_active === false) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("این حساب در حال حاضر غیرفعال است. با مدیر سامانه تماس بگیرید.");
       return;
     }
 
@@ -123,25 +178,25 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
-      <div className="md:w-1/2 grid-backdrop bg-base-panel border-l border-base-border flex flex-col justify-between p-10 relative overflow-hidden">
-        <div className="absolute -top-20 -left-20 w-72 h-72 bg-brand/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-24 -right-10 w-72 h-72 bg-eco/20 rounded-full blur-3xl" />
+      <div className="md:w-1/2 grid-backdrop border-l border-cyan-400/15 flex flex-col justify-between p-10 relative overflow-hidden">
+        <div className="absolute -top-20 -left-20 w-72 h-72 bg-cyan-400/10 rounded-full blur-3xl" />
+        <div className="absolute -bottom-24 -right-10 w-72 h-72 bg-blue-500/10 rounded-full blur-3xl" />
         <div className="relative">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-9 h-9 rounded-lg bg-aqua-eco shadow-glow-cyan flex items-center justify-center font-mono text-[#02171B] text-sm font-bold">P</div>
-            <span className="text-ink-muted text-sm">شرکت پیمانکاران تصفیه صنعت</span>
+            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-cyan-300 to-blue-600 shadow-glow-cyan flex items-center justify-center font-mono text-white text-sm font-bold">P</div>
+            <span className="text-slate-300 text-sm">شرکت پیمانکاران تصفیه صنعت</span>
           </div>
           <h1 className="text-3xl md:text-4xl font-bold leading-tight mt-10 max-w-md"><span className="text-gradient">سامانه مدیریت و نظارت</span> بر حمل پساب</h1>
-          <p className="text-ink-muted mt-4 max-w-md leading-7">زنجیره دیجیتال قابل رهگیری از درخواست حمل تا بارگیری، جابه‌جایی، تخلیه و تأیید مقصد — برای پتروشیمی‌های منطقه ویژه اقتصادی انرژی پارس.</p>
+          <p className="text-slate-400 mt-4 max-w-md leading-7">زنجیره دیجیتال قابل رهگیری از درخواست حمل تا بارگیری، جابه‌جایی، تخلیه و تأیید مقصد — برای پتروشیمی‌های منطقه ویژه اقتصادی انرژی پارس.</p>
         </div>
-        <div className="relative hidden md:flex gap-6 font-mono text-xs text-ink-faint"><span className="text-brand-light">● GPS TRACKING</span><span className="text-eco-light">● CHAIN OF CUSTODY</span><span>● RLS SECURED</span></div>
+        <div className="relative hidden md:flex gap-6 font-mono text-xs text-slate-500"><span className="text-cyan-300">● GPS TRACKING</span><span className="text-emerald-300">● CHAIN OF CUSTODY</span><span>● RLS SECURED</span></div>
       </div>
 
-      <div className="md:w-1/2 flex items-center justify-center p-8">
-        <div className="w-full max-w-sm">
+      <div className="md:w-1/2 flex items-center justify-center p-8 bg-[#020b18]/60">
+        <div className="w-full max-w-sm panel-glow p-6 md:p-7">
           <div className="flex gap-2 mb-6 text-sm">
-            <button type="button" onClick={() => setMode("password")} className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-brand text-white" : "text-ink-muted"}`}>ایمیل و رمز عبور</button>
-            <button type="button" onClick={() => setMode("otp")} className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-brand text-white" : "text-ink-muted"}`}>موبایل و کد یکبارمصرف</button>
+            <button type="button" onClick={() => setMode("password")} className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>ایمیل و رمز عبور</button>
+            <button type="button" onClick={() => setMode("otp")} className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>موبایل و کد یکبارمصرف</button>
           </div>
 
           {mode === "password" && (
@@ -154,16 +209,16 @@ export default function LoginPage() {
                 <label className="field-label">رمز عبور</label>
                 <div className="flex items-center gap-2">
                   <input className="field-input flex-1" type={showPassword ? "text" : "password"} autoComplete="current-password" dir="ltr" value={password} onChange={(e) => setPassword(e.target.value)} required />
-                  <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"} title={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"} className="shrink-0 grid h-11 w-11 place-items-center rounded-lg border border-base-border bg-base-panel text-brand-light/80 transition hover:border-brand/50 hover:bg-brand/10 hover:text-brand-light">
+                  <button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"} title={showPassword ? "مخفی کردن رمز عبور" : "نمایش رمز عبور"} className="shrink-0 grid h-11 w-11 place-items-center rounded-lg border border-cyan-400/20 bg-[#0b2238] text-cyan-200 transition hover:border-cyan-300/50 hover:bg-cyan-400/10 hover:text-white">
                     {showPassword ? <Eye size={19} /> : <EyeOff size={19} />}
                   </button>
                 </div>
               </div>
-              <label className="flex cursor-pointer items-center gap-2 text-xs text-ink-muted select-none">
+              <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-400 select-none">
                 <input type="checkbox" checked={rememberLogin} onChange={(e) => setRememberLogin(e.target.checked)} className="h-4 w-4 accent-cyan-400" />
                 اطلاعات ورود من را به خاطر بسپار
               </label>
-              {error && <p className="text-status-alert text-sm">{error}</p>}
+              {error && <p className="text-status-alert text-sm leading-6">{error}</p>}
               <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال ورود..." : "ورود"}</button>
             </form>
           )}
@@ -184,8 +239,8 @@ export default function LoginPage() {
             </form>
           )}
 
-          <p className="text-ink-faint text-xs mt-6">پتروشیمی هنوز عضو سامانه نیست؟ <a href="/register" className="text-brand-light">ثبت درخواست عضویت</a></p>
-          <p className="text-ink-faint text-xs mt-2">راننده هستید؟ <a href="/register/driver" className="text-brand-light">ثبت‌نام راننده</a></p>
+          <p className="text-slate-500 text-xs mt-6">پتروشیمی هنوز عضو سامانه نیست؟ <a href="/register" className="text-cyan-300">ثبت درخواست عضویت</a></p>
+          <p className="text-slate-500 text-xs mt-2">راننده هستید؟ <a href="/register/driver" className="text-cyan-300">ثبت‌نام راننده</a></p>
         </div>
       </div>
     </div>
