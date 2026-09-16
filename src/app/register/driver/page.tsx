@@ -50,9 +50,8 @@ export default function DriverRegisterPage() {
 
     setSubmitting(true);
     try {
-      // ۱. ساخت حساب کاربری
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-        email: form.email.trim(),
+        email: form.email.trim().toLowerCase(),
         password: form.password,
       });
       if (signUpError || !signUpData.user) {
@@ -62,14 +61,14 @@ export default function DriverRegisterPage() {
       }
       const userId = signUpData.user.id;
 
-      // ۲. ساخت پروفایل کاربر با نقش راننده
+      // حساب راننده تا تأیید مدیر غیرفعال می‌ماند.
       const { error: profileError } = await supabase.from("users").insert({
         id: userId,
         full_name: `${form.first_name.trim()} ${form.last_name.trim()}`,
         phone: form.mobile.trim(),
         national_code: form.national_code.trim(),
         role: "driver",
-        is_active: true,
+        is_active: false,
       });
       if (profileError) {
         setError("ثبت پروفایل ناموفق بود: " + profileError.message);
@@ -77,7 +76,6 @@ export default function DriverRegisterPage() {
         return;
       }
 
-      // ۳. ثبت رکورد راننده با وضعیت «در انتظار بررسی»
       const { data: driverRow, error: driverError } = await supabase
         .from("drivers")
         .insert({
@@ -99,7 +97,6 @@ export default function DriverRegisterPage() {
         return;
       }
 
-      // ۴. آپلود مدارک
       const uploads: { file: File; docType: string }[] = [{ file: licenseFile!, docType: "گواهینامه" }];
       if (extraFile) uploads.push({ file: extraFile, docType: "سایر مدارک" });
 
@@ -131,11 +128,10 @@ export default function DriverRegisterPage() {
       <div className="min-h-screen grid-backdrop flex items-center justify-center p-6">
         <div className="panel-glow p-8 text-center max-w-md">
           <div className="text-5xl mb-4">✅</div>
-          <h2 className="text-lg font-bold mb-2">ثبت‌نام شما انجام شد</h2>
+          <h2 className="text-lg font-bold mb-2">درخواست رانندگی ثبت شد</h2>
           <p className="text-ink-muted text-sm leading-7 mb-4">
-            حساب و مدارک شما ثبت شد و وضعیت پروندهٔ راننده <span className="text-status-warn">«در انتظار بررسی»</span>{" "}
-            است. پس از تأیید مدیر سامانه می‌توانید وارد اپلیکیشن راننده شوید. در صورت نیاز به تأیید ایمیل، ایمیل
-            ارسال‌شده را بررسی کنید.
+            اطلاعات و مدارک شما با موفقیت ثبت شد و پرونده در وضعیت <span className="text-status-warn">«در انتظار تأیید مدیر»</span> قرار گرفت.
+            تا زمانی که مدیر سامانه پرونده را تأیید نکند، امکان ورود و انجام عملیات رانندگی فعال نخواهد شد.
           </p>
           <Link href="/login" className="btn-outline-eco inline-block">
             بازگشت به صفحه ورود
@@ -152,14 +148,10 @@ export default function DriverRegisterPage() {
 
       <div className="relative max-w-2xl mx-auto px-6 py-10">
         <div className="flex items-center gap-3 mb-8">
-          <div className="w-9 h-9 rounded-lg bg-aqua-eco shadow-glow-cyan flex items-center justify-center font-mono text-[#02171B] text-sm font-bold">
-            P
-          </div>
+          <div className="w-9 h-9 rounded-lg bg-aqua-eco shadow-glow-cyan flex items-center justify-center font-mono text-[#02171B] text-sm font-bold">P</div>
           <div>
-            <p className="text-sm font-medium">
-              <span className="text-gradient font-bold">ثبت‌نام مستقل راننده</span>
-            </p>
-            <p className="text-xs text-ink-faint">بدون نیاز به معرفی از سوی شرکت حمل</p>
+            <p className="text-sm font-medium"><span className="text-gradient font-bold">ثبت‌نام مستقل راننده</span></p>
+            <p className="text-xs text-ink-faint">درخواست پس از بررسی مدیر سامانه فعال می‌شود</p>
           </div>
         </div>
 
@@ -172,12 +164,7 @@ export default function DriverRegisterPage() {
             <Field label="شماره گواهینامه *" value={form.license_no} onChange={(v) => update("license_no", v)} dir="ltr" />
             <div>
               <label className="field-label">تاریخ اعتبار گواهینامه</label>
-              <input
-                className="field-input"
-                type="date"
-                value={form.license_expiry}
-                onChange={(e) => update("license_expiry", e.target.value)}
-              />
+              <input className="field-input" type="date" value={form.license_expiry} onChange={(e) => update("license_expiry", e.target.value)} />
             </div>
           </div>
 
@@ -189,55 +176,25 @@ export default function DriverRegisterPage() {
           <div className="border-t border-base-border pt-4 space-y-4">
             <div>
               <label className="field-label">تصویر گواهینامه *</label>
-              <input
-                className="field-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => setLicenseFile(e.target.files?.[0] ?? null)}
-              />
+              <input className="field-input" type="file" accept="image/*,application/pdf" onChange={(e) => setLicenseFile(e.target.files?.[0] ?? null)} />
             </div>
             <div>
               <label className="field-label">سایر مدارک (اختیاری)</label>
-              <input
-                className="field-input"
-                type="file"
-                accept="image/*,application/pdf"
-                onChange={(e) => setExtraFile(e.target.files?.[0] ?? null)}
-              />
+              <input className="field-input" type="file" accept="image/*,application/pdf" onChange={(e) => setExtraFile(e.target.files?.[0] ?? null)} />
             </div>
           </div>
 
           {error && <p className="text-status-alert text-sm">{error}</p>}
-
-          <button className="btn-primary w-full" disabled={submitting}>
-            {submitting ? "در حال ثبت..." : "ثبت‌نام"}
-          </button>
+          <button className="btn-primary w-full" disabled={submitting}>{submitting ? "در حال ثبت..." : "ارسال درخواست ثبت‌نام"}</button>
         </form>
 
-        <p className="text-xs text-ink-faint mt-4">
-          شرکت حمل هستید؟{" "}
-          <Link href="/register" className="text-brand-light">
-            ثبت‌نام سازمانی
-          </Link>
-        </p>
+        <p className="text-xs text-ink-faint mt-4">شرکت حمل هستید؟ <Link href="/register" className="text-brand-light">ثبت‌نام سازمانی</Link></p>
       </div>
     </div>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  dir = "rtl",
-  type = "text",
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  dir?: "rtl" | "ltr";
-  type?: string;
-}) {
+function Field({ label, value, onChange, dir = "rtl", type = "text" }: { label: string; value: string; onChange: (v: string) => void; dir?: "rtl" | "ltr"; type?: string }) {
   return (
     <div>
       <label className="field-label">{label}</label>
