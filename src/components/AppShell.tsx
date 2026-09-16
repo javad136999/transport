@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { Droplets, LayoutDashboard } from "lucide-react";
+import { ArrowRight, Droplets, Home, LayoutDashboard } from "lucide-react";
 
 export function AppShell({
   title,
@@ -15,7 +16,26 @@ export function AppShell({
   nav: { label: string; href: string; active?: boolean }[];
   children: ReactNode;
 }) {
+  const pathname = usePathname();
+  const router = useRouter();
   const mobileNav = nav.slice(0, 5);
+
+  // Navigation buttons are intentionally contextual: main navigation pages stay clean,
+  // while deeper/detail/form pages get a compact back + home control in the header.
+  const currentNav = nav.find((item) => item.href === pathname);
+  const parentNav = nav
+    .filter((item) => item.href !== pathname && pathname.startsWith(`${item.href}/`))
+    .sort((a, b) => b.href.length - a.href.length)[0];
+  const showContextNav = !currentNav && !!parentNav;
+  const homeHref = nav[0]?.href ?? "/";
+
+  const handleBack = () => {
+    if (typeof window !== "undefined" && window.history.length > 1) {
+      router.back();
+      return;
+    }
+    router.push(parentNav?.href ?? homeHref);
+  };
 
   return (
     <div className="min-h-[100dvh] bg-transparent md:flex">
@@ -55,13 +75,36 @@ export function AppShell({
       </aside>
 
       <main className="min-w-0 flex-1 pb-24 md:pb-0">
-        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-4 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl md:px-6">
+        <header className="sticky top-0 z-30 flex min-h-16 items-center justify-between border-b border-brand/10 bg-[#020812e8] px-3 shadow-[0_8px_30px_rgba(0,0,0,.18)] backdrop-blur-2xl sm:px-4 md:px-6">
           <div className="min-w-0">
             <div className="mb-0.5 flex items-center gap-1.5 text-[10px] text-brand-light/55 md:hidden">
               <LayoutDashboard size={11} /> سامانه هوشمند حمل پساب
             </div>
             <h1 className="truncate text-sm font-bold text-white md:text-base">{title}</h1>
           </div>
+
+          {showContextNav && (
+            <div className="flex shrink-0 items-center gap-1.5 mr-3" aria-label="ناوبری صفحه">
+              <button
+                type="button"
+                onClick={handleBack}
+                aria-label="بازگشت"
+                title="بازگشت"
+                className="grid h-9 w-9 place-items-center rounded-xl border border-base-border bg-base-panel2/80 text-ink-muted transition hover:border-brand/30 hover:bg-brand/10 hover:text-brand-light active:scale-95"
+              >
+                <ArrowRight size={17} />
+              </button>
+              <Link
+                href={homeHref}
+                aria-label="خانه"
+                title="خانه"
+                className="grid h-9 w-9 place-items-center rounded-xl border border-brand/20 bg-brand/5 text-brand-light transition hover:bg-brand/10 active:scale-95"
+              >
+                <Home size={17} />
+              </Link>
+            </div>
+          )}
+
           <div className="hidden items-center gap-2 rounded-full border border-brand/20 bg-brand/5 px-3 py-1.5 text-[10px] text-brand-light/80 md:flex">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand shadow-[0_0_10px_#00BFFF]" />
             رصد عملیاتی آنلاین
