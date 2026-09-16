@@ -7,7 +7,7 @@ const config: Config = {
     extend: {
       colors: {
         base: { DEFAULT: "#effcff", panel: "#ffffff", panel2: "#f4fcff", border: "#bfeaf2" },
-        ink: { DEFAULT: "#102a43", muted: "#486581", faint: "#627d98" },
+        ink: { DEFAULT: "#000000", muted: "#111827", faint: "#374151" },
         brand: { DEFAULT: "#00BFFF", light: "#55E7FF", dark: "#0077B6", glow: "#75F3FF" },
         eco: { DEFAULT: "#08A879", light: "#24C99A", dark: "#087F5B", glow: "#66E0BC" },
         status: { ok: "#07885F", warn: "#C77700", alert: "#DC2626", progress: "#008FD5", idle: "#627D98" },
