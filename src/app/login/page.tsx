@@ -10,7 +10,7 @@ const SAVED_LOGIN_KEY = "waste-login-email";
 export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
-  const [mode, setMode] = useState<"password" | "otp">("password");
+  const [mode, setMode] = useState<"password" | "otp" | "activate">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -78,13 +78,12 @@ export default function LoginPage() {
           return;
         }
 
-        const { data: createdProfile, error: createProfileError } = await supabase
+          const { data: createdProfile, error: createProfileError } = await supabase
           .from("users")
-          .insert({
-            id: data.user.id,
-            email: normalizedEmail,
-            full_name: organization.manager_name ?? organization.name,
-            role: "petro_manager",
+            .insert({
+              id: data.user.id,
+              full_name: organization.manager_name ?? organization.name,
+              role: "petro_manager",
             organization_id: organization.id,
             is_active: true,
           })
@@ -176,6 +175,52 @@ export default function LoginPage() {
     router.refresh();
   }
 
+  async function handleActivate(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+    const normalizedEmail = email.trim().toLowerCase();
+    const { data, error: signUpError } = await supabase.auth.signUp({ email: normalizedEmail, password });
+    if (signUpError) {
+      setLoading(false);
+      setError(signUpError.message.toLowerCase().includes("already registered") ? "این ایمیل قبلاً فعال شده است؛ از گزینه ورود استفاده کنید." : "فعال‌سازی حساب انجام نشد. ایمیل و رمز عبور را بررسی کنید.");
+      return;
+    }
+    if (!data.session || !data.user) {
+      setLoading(false);
+      setError("حساب ایجاد شد. ایمیل تأیید را باز کنید و سپس وارد شوید.");
+      return;
+    }
+    const { data: organization } = await supabase
+      .from("organizations")
+      .select("id, name, manager_name, status")
+      .ilike("email", normalizedEmail)
+      .eq("type", "petrochemical")
+      .maybeSingle();
+    if (!organization || organization.status !== "approved") {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("برای این ایمیل، پتروشیمی تأییدشده‌ای پیدا نشد.");
+      return;
+    }
+    const { error: profileError } = await supabase.from("users").insert({
+      id: data.user.id,
+      full_name: organization.manager_name ?? organization.name,
+      role: "petro_manager",
+      organization_id: organization.id,
+      is_active: true,
+    });
+    if (profileError) {
+      await supabase.auth.signOut();
+      setLoading(false);
+      setError("حساب ساخته شد، اما پروفایل سازمانی ایجاد نشد. دوباره تلاش کنید.");
+      return;
+    }
+    setLoading(false);
+    router.replace("/petro/dashboard");
+    router.refresh();
+  }
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       <div className="md:w-1/2 grid-backdrop border-l border-cyan-400/15 flex flex-col justify-between p-10 relative overflow-hidden">
@@ -195,8 +240,9 @@ export default function LoginPage() {
       <div className="md:w-1/2 flex items-center justify-center p-8 bg-[#020b18]/60">
         <div className="w-full max-w-sm panel-glow p-6 md:p-7">
           <div className="flex gap-2 mb-6 text-sm">
-            <button type="button" onClick={() => setMode("password")} className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>ایمیل و رمز عبور</button>
-            <button type="button" onClick={() => setMode("otp")} className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>موبایل و کد یکبارمصرف</button>
+            <button type="button" onClick={() => setMode("password")} className={`px-3 py-1.5 rounded ${mode === "password" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>ورود</button>
+            <button type="button" onClick={() => setMode("otp")} className={`px-3 py-1.5 rounded ${mode === "otp" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>کد یکبارمصرف</button>
+            <button type="button" onClick={() => setMode("activate")} className={`px-3 py-1.5 rounded ${mode === "activate" ? "bg-gradient-to-l from-cyan-400 to-blue-600 text-white" : "text-slate-400"}`}>فعال‌سازی سازمان</button>
           </div>
 
           {mode === "password" && (
@@ -220,6 +266,16 @@ export default function LoginPage() {
               </label>
               {error && <p className="text-status-alert text-sm leading-6">{error}</p>}
               <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال ورود..." : "ورود"}</button>
+            </form>
+          )}
+
+          {mode === "activate" && (
+            <form onSubmit={handleActivate} className="space-y-4">
+              <p className="rounded-xl border border-cyan-100 bg-cyan-50 p-3 text-xs leading-6 text-slate-600">برای سازمانی که درخواستش تأیید شده، با ایمیل ثبت‌شده یک رمز تعیین کنید.</p>
+              <div><label className="field-label">ایمیل ثبت‌شده سازمان</label><input className="field-input" type="email" inputMode="email" dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+              <div><label className="field-label">رمز عبور جدید</label><input className="field-input" type="password" autoComplete="new-password" dir="ltr" minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+              {error && <p className="text-status-alert text-sm leading-6">{error}</p>}
+              <button className="btn-primary w-full" disabled={loading}>{loading ? "در حال فعال‌سازی..." : "فعال‌سازی حساب پتروشیمی"}</button>
             </form>
           )}
 
